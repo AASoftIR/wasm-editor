@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Lesson 03: JS ↔ WASM Bridge</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			body {
+				font-family: "Segoe UI", system-ui, sans-serif;
+				background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+				min-height: 100vh;
+				color: #fff;
+				padding: 2rem;
+			}
+			.container {
+				max-width: 800px;
+				margin: 0 auto;
+			}
+			h1 {
+				text-align: center;
+				margin-bottom: 2rem;
+				font-size: 2rem;
+			}
+			.demo-section {
+				background: rgba(255, 255, 255, 0.1);
+				border-radius: 16px;
+				padding: 1.5rem;
+				margin-bottom: 1.5rem;
+				backdrop-filter: blur(10px);
+			}
+			.demo-section h2 {
+				color: #ffd700;
+				margin-bottom: 1rem;
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+			}
+			.bridge-visual {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 1rem;
+				padding: 1rem;
+				background: rgba(0, 0, 0, 0.2);
+				border-radius: 8px;
+				margin: 1rem 0;
+			}
+			.side {
+				padding: 1rem;
+				border-radius: 8px;
+				text-align: center;
+				min-width: 150px;
+			}
+			.js-side {
+				background: #f7df1e;
+				color: #000;
+			}
+			.wasm-side {
+				background: #654ff0;
+				color: #fff;
+			}
+			.arrow {
+				font-size: 2rem;
+				animation: pulse 1s infinite;
+			}
+			@keyframes pulse {
+				0%,
+				100% {
+					opacity: 0.5;
+				}
+				50% {
+					opacity: 1;
+				}
+			}
+			input,
+			button {
+				padding: 0.8rem 1.2rem;
+				border-radius: 8px;
+				border: none;
+				font-size: 1rem;
+			}
+			input {
+				background: rgba(0, 0, 0, 0.3);
+				color: white;
+				width: 100%;
+				margin-bottom: 1rem;
+			}
+			input::placeholder {
+				color: rgba(255, 255, 255, 0.5);
+			}
+			button {
+				background: linear-gradient(135deg, #667eea, #764ba2);
+				color: white;
+				cursor: pointer;
+				transition: transform 0.2s;
+			}
+			button:hover {
+				transform: scale(1.02);
+			}
+			.result {
+				margin-top: 1rem;
+				padding: 1rem;
+				background: rgba(0, 255, 136, 0.1);
+				border-radius: 8px;
+				font-family: "Fira Code", monospace;
+			}
+			.log-output {
+				background: #0d1117;
+				padding: 1rem;
+				border-radius: 8px;
+				font-family: "Fira Code", monospace;
+				font-size: 0.85rem;
+				max-height: 150px;
+				overflow-y: auto;
+				margin-top: 1rem;
+			}
+			.log-entry {
+				padding: 0.25rem 0;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.log-entry.js {
+				color: #f7df1e;
+			}
+			.log-entry.wasm {
+				color: #654ff0;
+			}
+			.memory-grid {
+				display: grid;
+				grid-template-columns: repeat(16, 1fr);
+				gap: 2px;
+				margin: 1rem 0;
+				font-family: "Fira Code", monospace;
+				font-size: 0.7rem;
+			}
+			.memory-cell {
+				background: rgba(0, 0, 0, 0.3);
+				padding: 0.3rem;
+				text-align: center;
+				border-radius: 2px;
+			}
+			.memory-cell.active {
+				background: #654ff0;
+			}
+			.status {
+				text-align: center;
+				padding: 0.5rem;
+				margin-top: 1rem;
+				border-radius: 8px;
+				background: rgba(0, 255, 136, 0.2);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🌉 JavaScript ↔ WASM Bridge</h1>
+
+			<!-- Demo 1: Simple Numbers -->
+			<div class="demo-section">
+				<h2>1️⃣ Simple Numbers</h2>
+				<p>Numbers pass directly between JS and WASM</p>
+
+				<div class="bridge-visual">
+					<div class="side js-side">
+						<strong>JavaScript</strong><br />
+						add(5, 3)
+					</div>
+					<span class="arrow">→</span>
+					<div class="side wasm-side">
+						<strong>WASM</strong><br />
+						i32.add
+					</div>
+					<span class="arrow">→</span>
+					<div class="side js-side">
+						<strong>Result</strong><br />
+						<span id="simple-result">8</span>
+					</div>
+				</div>
+
+				<div style="display: flex; gap: 1rem">
+					<input type="number" id="num1" value="10" placeholder="Number 1" />
+					<input type="number" id="num2" value="25" placeholder="Number 2" />
+				</div>
+				<button onclick="simpleDemo()">Call WASM Add</button>
+			</div>
+
+			<!-- Demo 2: Shared Memory (Strings) -->
+			<div class="demo-section">
+				<h2>2️⃣ Strings via Shared Memory</h2>
+				<p>Strings must be encoded to bytes and shared via memory</p>
+
+				<input
+					type="text"
+					id="stringInput"
+					placeholder="Enter text to process..."
+					value="Hello WASM World!"
+				/>
+				<button onclick="stringDemo()">Count Uppercase Letters (WASM)</button>
+
+				<div class="result" id="string-result">
+					Enter text and click the button
+				</div>
+
+				<p style="margin-top: 1rem; font-size: 0.9rem">
+					Memory view (first 32 bytes):
+				</p>
+				<div class="memory-grid" id="memory-view">
+					<!-- Filled by JS -->
+				</div>
+			</div>
+
+			<!-- Demo 3: WASM calls JS -->
+			<div class="demo-section">
+				<h2>3️⃣ WASM Calling JavaScript</h2>
+				<p>WASM can call JS functions via imports!</p>
+
+				<button onclick="callbackDemo()">Run WASM (calls JS log)</button>
+
+				<div class="log-output" id="log-output">
+					<div class="log-entry">Waiting for demo...</div>
+				</div>
+			</div>
+
+			<div class="status" id="status">⏳ Loading WASM modules...</div>
+		</div>
+
+		<script>
+			// Shared memory for string operations
+			const memory = new WebAssembly.Memory({ initial: 1 });
+
+			// Log output element
+			const logOutput = document.getElementById("log-output");
+
+			// Custom log function that WASM can call
+			function wasmLog(value) {
+				const entry = document.createElement("div");
+				entry.className = "log-entry wasm";
+				entry.textContent = `[WASM → JS] Value: ${value}`;
+				logOutput.appendChild(entry);
+				logOutput.scrollTop = logOutput.scrollHeight;
+			}
+
+			function jsLog(msg) {
+				const entry = document.createElement("div");
+				entry.className = "log-entry js";
+				entry.textContent = `[JS] ${msg}`;
+				logOutput.appendChild(entry);
+				logOutput.scrollTop = logOutput.scrollHeight;
+			}
+
+			// Simple add WASM binary
+			const addWasm = new Uint8Array([
+				0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x07, 0x01, 0x60,
+				0x02, 0x7f, 0x7f, 0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x07, 0x01,
+				0x03, 0x61, 0x64, 0x64, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x20,
+				0x00, 0x20, 0x01, 0x6a, 0x0b,
+			]);
+
+			// String counter WASM binary (counts uppercase A-Z)
+			const stringWasm = new Uint8Array([
+				0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x0a, 0x02, 0x60,
+				0x01, 0x7f, 0x00, 0x60, 0x02, 0x7f, 0x7f, 0x01, 0x7f, 0x02, 0x11, 0x02,
+				0x03, 0x65, 0x6e, 0x76, 0x03, 0x6c, 0x6f, 0x67, 0x00, 0x00, 0x02, 0x6a,
+				0x73, 0x03, 0x6d, 0x65, 0x6d, 0x00, 0x00, 0x01, 0x03, 0x02, 0x01, 0x01,
+				0x07, 0x12, 0x01, 0x0e, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x55, 0x70, 0x70,
+				0x65, 0x72, 0x63, 0x61, 0x73, 0x65, 0x00, 0x01, 0x0a, 0x2e, 0x01, 0x2c,
+				0x01, 0x03, 0x7f, 0x03, 0x40, 0x20, 0x02, 0x20, 0x01, 0x49, 0x04, 0x40,
+				0x20, 0x00, 0x20, 0x02, 0x6a, 0x2d, 0x00, 0x00, 0x22, 0x04, 0x41, 0xc1,
+				0x00, 0x4f, 0x20, 0x04, 0x41, 0xda, 0x00, 0x4d, 0x71, 0x04, 0x40, 0x20,
+				0x03, 0x41, 0x01, 0x6a, 0x21, 0x03, 0x0b, 0x20, 0x02, 0x41, 0x01, 0x6a,
+				0x21, 0x02, 0x0c, 0x01, 0x0b, 0x0b, 0x20, 0x03, 0x0b,
+			]);
+
+			// WASM with callback
+			const callbackWasm = new Uint8Array([
+				0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x60,
+				0x01, 0x7f, 0x00, 0x60, 0x00, 0x00, 0x02, 0x0b, 0x01, 0x03, 0x65, 0x6e,
+				0x76, 0x03, 0x6c, 0x6f, 0x67, 0x00, 0x00, 0x03, 0x02, 0x01, 0x01, 0x07,
+				0x0b, 0x01, 0x07, 0x72, 0x75, 0x6e, 0x54, 0x65, 0x73, 0x74, 0x00, 0x01,
+				0x0a, 0x16, 0x01, 0x14, 0x00, 0x41, 0x01, 0x10, 0x00, 0x41, 0x02, 0x10,
+				0x00, 0x41, 0x03, 0x10, 0x00, 0x41, 0x2a, 0x10, 0x00, 0x0b,
+			]);
+
+			let wasmModules = {};
+
+			async function initWasm() {
+				try {
+					// Load simple add
+					const { instance: addInstance } = await WebAssembly.instantiate(
+						addWasm
+					);
+					wasmModules.add = addInstance.exports.add;
+
+					// Load string counter with memory import
+					const stringImports = {
+						env: { log: wasmLog },
+						js: { mem: memory },
+					};
+					const { instance: stringInstance } = await WebAssembly.instantiate(
+						stringWasm,
+						stringImports
+					);
+					wasmModules.countUppercase = stringInstance.exports.countUppercase;
+
+					// Load callback demo
+					const callbackImports = {
+						env: { log: wasmLog },
+					};
+					const { instance: callbackInstance } = await WebAssembly.instantiate(
+						callbackWasm,
+						callbackImports
+					);
+					wasmModules.runTest = callbackInstance.exports.runTest;
+
+					document.getElementById("status").innerHTML =
+						"✅ All WASM modules loaded!";
+					document.getElementById("status").style.background =
+						"rgba(0,255,136,0.3)";
+
+					// Initialize memory view
+					updateMemoryView();
+				} catch (e) {
+					document.getElementById("status").innerHTML =
+						"❌ Error: " + e.message;
+					document.getElementById("status").style.background =
+						"rgba(255,0,0,0.3)";
+					console.error(e);
+				}
+			}
+
+			function simpleDemo() {
+				const a = parseInt(document.getElementById("num1").value) || 0;
+				const b = parseInt(document.getElementById("num2").value) || 0;
+				const result = wasmModules.add(a, b);
+				document.getElementById("simple-result").textContent = result;
+			}
+
+			function stringDemo() {
+				const text = document.getElementById("stringInput").value;
+
+				// Encode string to bytes
+				const encoder = new TextEncoder();
+				const bytes = encoder.encode(text);
+
+				// Write to shared memory at position 0
+				new Uint8Array(memory.buffer).set(bytes, 0);
+
+				// Call WASM with pointer (0) and length
+				const count = wasmModules.countUppercase(0, bytes.length);
+
+				document.getElementById("string-result").innerHTML =
+					`Text: "<strong>${text}</strong>"<br>` +
+					`Length: ${bytes.length} bytes<br>` +
+					`Uppercase letters (A-Z): <strong style="color: #00ff88">${count}</strong>`;
+
+				updateMemoryView(bytes.length);
+			}
+
+			function updateMemoryView(activeLength = 0) {
+				const view = new Uint8Array(memory.buffer);
+				const grid = document.getElementById("memory-view");
+				grid.innerHTML = "";
+
+				for (let i = 0; i < 32; i++) {
+					const cell = document.createElement("div");
+					cell.className = "memory-cell" + (i < activeLength ? " active" : "");
+					const byte = view[i];
+					// Show printable ASCII or hex
+					cell.textContent =
+						byte >= 32 && byte <= 126
+							? String.fromCharCode(byte)
+							: byte.toString(16).padStart(2, "0");
+					cell.title = `[${i}]: ${byte} (0x${byte.toString(16)})`;
+					grid.appendChild(cell);
+				}
+			}
+
+			function callbackDemo() {
+				logOutput.innerHTML = "";
+				jsLog("Starting WASM function that calls back to JS...");
+				wasmModules.runTest();
+				jsLog("WASM function completed!");
+			}
+
+			// Initialize
+			initWasm();
+		</script>
+	</body>
+</html>

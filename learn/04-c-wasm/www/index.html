@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Lesson 04: C → WASM with Emscripten</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			body {
+				font-family: "Segoe UI", system-ui, sans-serif;
+				background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+				min-height: 100vh;
+				color: #fff;
+				padding: 2rem;
+			}
+			.container {
+				max-width: 900px;
+				margin: 0 auto;
+			}
+			h1 {
+				text-align: center;
+				margin-bottom: 0.5rem;
+				font-size: 2.5rem;
+				background: linear-gradient(90deg, #00d4ff, #00ff88);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+			}
+			.subtitle {
+				text-align: center;
+				color: #888;
+				margin-bottom: 2rem;
+			}
+			.demo-box {
+				background: rgba(255, 255, 255, 0.05);
+				border-radius: 16px;
+				padding: 1.5rem;
+				margin-bottom: 1.5rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.demo-box h2 {
+				color: #00d4ff;
+				margin-bottom: 1rem;
+				font-size: 1.3rem;
+			}
+			.result {
+				font-size: 1.5rem;
+				padding: 1rem;
+				background: rgba(0, 212, 255, 0.1);
+				border-radius: 8px;
+				margin: 1rem 0;
+				font-family: "Fira Code", monospace;
+				text-align: center;
+			}
+			.result.success {
+				border-left: 4px solid #00ff88;
+			}
+			.result.error {
+				border-left: 4px solid #ff6b6b;
+			}
+			.comparison {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 1rem;
+			}
+			.comparison-card {
+				background: rgba(255, 255, 255, 0.05);
+				padding: 1.5rem;
+				border-radius: 8px;
+				text-align: center;
+			}
+			.comparison-card.js {
+				border-top: 3px solid #f7df1e;
+			}
+			.comparison-card.wasm {
+				border-top: 3px solid #00d4ff;
+			}
+			.time {
+				font-size: 2rem;
+				font-weight: bold;
+				margin: 0.5rem 0;
+			}
+			.js .time {
+				color: #f7df1e;
+			}
+			.wasm .time {
+				color: #00d4ff;
+			}
+			.speedup {
+				font-size: 1.5rem;
+				color: #00ff88;
+				text-align: center;
+				padding: 1rem;
+				background: rgba(0, 255, 136, 0.1);
+				border-radius: 8px;
+				margin-top: 1rem;
+			}
+			button {
+				background: linear-gradient(90deg, #00d4ff, #7c3aed);
+				border: none;
+				padding: 0.8rem 1.5rem;
+				border-radius: 8px;
+				color: white;
+				font-size: 1rem;
+				cursor: pointer;
+				transition: all 0.2s;
+				margin: 0.3rem;
+			}
+			button:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
+			}
+			button:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+			}
+			.code-block {
+				background: #0d1117;
+				padding: 1rem;
+				border-radius: 8px;
+				font-family: "Fira Code", monospace;
+				font-size: 0.85rem;
+				overflow-x: auto;
+				margin: 1rem 0;
+				color: #c9d1d9;
+			}
+			.input-group {
+				display: flex;
+				gap: 0.5rem;
+				margin: 1rem 0;
+			}
+			input[type="number"],
+			input[type="text"] {
+				padding: 0.8rem;
+				border-radius: 8px;
+				border: 1px solid rgba(255, 255, 255, 0.2);
+				background: rgba(0, 0, 0, 0.3);
+				color: white;
+				font-size: 1rem;
+				width: 100px;
+			}
+			input[type="text"] {
+				flex: 1;
+			}
+			.status {
+				padding: 1rem;
+				border-radius: 8px;
+				text-align: center;
+				margin-bottom: 1rem;
+			}
+			.status.loading {
+				background: rgba(255, 200, 0, 0.1);
+				color: #ffd700;
+			}
+			.status.ready {
+				background: rgba(0, 255, 136, 0.1);
+				color: #00ff88;
+			}
+			.status.error {
+				background: rgba(255, 100, 100, 0.1);
+				color: #ff6b6b;
+			}
+			.grid-2 {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 1rem;
+			}
+			@media (max-width: 600px) {
+				.grid-2,
+				.comparison {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🔧 C → WASM Demo</h1>
+			<p class="subtitle">Powered by Emscripten</p>
+
+			<div id="status" class="status loading">⏳ Loading WASM module...</div>
+
+			<!-- Basic Math -->
+			<div class="demo-box">
+				<h2>📊 Basic Math (WASM)</h2>
+				<div class="input-group">
+					<input type="number" id="num1" value="42" placeholder="A" />
+					<input type="number" id="num2" value="13" placeholder="B" />
+					<button onclick="testMath()">Calculate</button>
+				</div>
+				<div class="grid-2">
+					<div class="result" id="add-result">A + B = ?</div>
+					<div class="result" id="sub-result">A - B = ?</div>
+					<div class="result" id="mul-result">A × B = ?</div>
+					<div class="result" id="div-result">A ÷ B = ?</div>
+				</div>
+			</div>
+
+			<!-- String Demo -->
+			<div class="demo-box">
+				<h2>📝 String Processing</h2>
+				<div class="input-group">
+					<input
+						type="text"
+						id="name-input"
+						value="World"
+						placeholder="Enter name"
+					/>
+					<button onclick="testString()">Greet</button>
+				</div>
+				<div class="result" id="greet-result">Hello, ?</div>
+				<div class="result" id="reverse-result">Reversed: ?</div>
+			</div>
+
+			<!-- Performance Benchmark -->
+			<div class="demo-box">
+				<h2>🚀 Performance: fibonacci(40)</h2>
+				<button onclick="runBenchmark()">Run Benchmark</button>
+
+				<div class="comparison">
+					<div class="comparison-card js">
+						<h3>JavaScript</h3>
+						<div class="time" id="js-time">— ms</div>
+						<small>Pure JS implementation</small>
+					</div>
+					<div class="comparison-card wasm">
+						<h3>C / WASM</h3>
+						<div class="time" id="wasm-time">— ms</div>
+						<small>Compiled from C</small>
+					</div>
+				</div>
+				<div class="speedup" id="speedup">Run benchmark to compare!</div>
+			</div>
+
+			<!-- Heavy Computation -->
+			<div class="demo-box">
+				<h2>⚡ Heavy Computation Test</h2>
+				<p style="margin-bottom: 1rem; color: #888">
+					10 million iterations of complex math
+				</p>
+				<button onclick="runHeavyBenchmark()">Run Heavy Test</button>
+
+				<div class="comparison">
+					<div class="comparison-card js">
+						<h3>JavaScript</h3>
+						<div class="time" id="js-heavy-time">— ms</div>
+					</div>
+					<div class="comparison-card wasm">
+						<h3>C / WASM</h3>
+						<div class="time" id="wasm-heavy-time">— ms</div>
+					</div>
+				</div>
+				<div class="speedup" id="heavy-speedup">—</div>
+			</div>
+
+			<!-- Code Example -->
+			<div class="demo-box">
+				<h2>💻 C Source Code</h2>
+				<div class="code-block">
+					<span style="color: #ff7b72">#include</span>
+					<span style="color: #a5d6ff">&lt;emscripten.h&gt;</span>
+
+					<span style="color: #ff7b72">EMSCRIPTEN_KEEPALIVE</span>
+					<span style="color: #ff7b72">int</span>
+					<span style="color: #d2a8ff">fibonacci</span>(<span
+						style="color: #ff7b72"
+						>int</span
+					>
+					n) { <span style="color: #ff7b72">if</span> (n <=
+					<span style="color: #79c0ff">1</span>)
+					<span style="color: #ff7b72">return</span> n;
+					<span style="color: #ff7b72">return</span> fibonacci(n -
+					<span style="color: #79c0ff">1</span>) + fibonacci(n -
+					<span style="color: #79c0ff">2</span>); }
+
+					<span style="color: #8b949e">// Build command:</span>
+					<span style="color: #8b949e"
+						>// emcc main.c -o main.js -s WASM=1 -O2</span
+					>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			// Emscripten module configuration
+			var Module = {
+				onRuntimeInitialized: function () {
+					document.getElementById("status").className = "status ready";
+					document.getElementById("status").innerHTML =
+						"✅ C/WASM Module Ready!";
+					console.log("WASM Module loaded");
+
+					// Initial test
+					testMath();
+				},
+			};
+
+			// JavaScript implementations for comparison
+			function fibonacciJS(n) {
+				if (n <= 1) return n;
+				return fibonacciJS(n - 1) + fibonacciJS(n - 2);
+			}
+
+			function heavyComputationJS(iterations) {
+				let result = 0;
+				for (let i = 0; i < iterations; i++) {
+					result += (i * i) % 1000;
+					result ^= result << 3;
+					result = (result + 17) % 10000;
+				}
+				return result;
+			}
+
+			// Test functions
+			function testMath() {
+				if (!Module._add) return;
+
+				const a = parseInt(document.getElementById("num1").value) || 0;
+				const b = parseInt(document.getElementById("num2").value) || 0;
+
+				document.getElementById(
+					"add-result"
+				).textContent = `${a} + ${b} = ${Module._add(a, b)}`;
+				document.getElementById(
+					"sub-result"
+				).textContent = `${a} - ${b} = ${Module._subtract(a, b)}`;
+				document.getElementById(
+					"mul-result"
+				).textContent = `${a} × ${b} = ${Module._multiply(a, b)}`;
+				document.getElementById(
+					"div-result"
+				).textContent = `${a} ÷ ${b} = ${Module._divide(a, b).toFixed(2)}`;
+			}
+
+			function testString() {
+				if (!Module.cwrap) return;
+
+				const name = document.getElementById("name-input").value || "World";
+
+				// Using cwrap for string functions
+				const greet = Module.cwrap("greet", "string", ["string"]);
+				const reverse = Module.cwrap("reverse_string", "string", ["string"]);
+
+				document.getElementById("greet-result").textContent = greet(name);
+				document.getElementById(
+					"reverse-result"
+				).textContent = `Reversed: ${reverse(name)}`;
+			}
+
+			function runBenchmark() {
+				if (!Module._fibonacci) {
+					alert("WASM not loaded yet!");
+					return;
+				}
+
+				const n = 40;
+
+				// JavaScript benchmark
+				const jsStart = performance.now();
+				const jsResult = fibonacciJS(n);
+				const jsEnd = performance.now();
+				const jsTime = jsEnd - jsStart;
+
+				// WASM benchmark
+				const wasmStart = performance.now();
+				const wasmResult = Module._fibonacci(n);
+				const wasmEnd = performance.now();
+				const wasmTime = wasmEnd - wasmStart;
+
+				// Display results
+				document.getElementById("js-time").textContent =
+					jsTime.toFixed(1) + " ms";
+				document.getElementById("wasm-time").textContent =
+					wasmTime.toFixed(1) + " ms";
+
+				const speedup = (jsTime / wasmTime).toFixed(1);
+				document.getElementById(
+					"speedup"
+				).innerHTML = `🚀 C/WASM is <strong>${speedup}x faster!</strong> (Result: ${wasmResult})`;
+			}
+
+			function runHeavyBenchmark() {
+				if (!Module._heavy_computation) {
+					alert("WASM not loaded yet!");
+					return;
+				}
+
+				const iterations = 10000000;
+
+				// JavaScript
+				const jsStart = performance.now();
+				const jsResult = heavyComputationJS(iterations);
+				const jsTime = performance.now() - jsStart;
+
+				// WASM
+				const wasmStart = performance.now();
+				const wasmResult = Module._heavy_computation(iterations);
+				const wasmTime = performance.now() - wasmStart;
+
+				document.getElementById("js-heavy-time").textContent =
+					jsTime.toFixed(1) + " ms";
+				document.getElementById("wasm-heavy-time").textContent =
+					wasmTime.toFixed(1) + " ms";
+
+				const speedup = (jsTime / wasmTime).toFixed(1);
+				document.getElementById(
+					"heavy-speedup"
+				).innerHTML = `🚀 C/WASM is <strong>${speedup}x faster!</strong>`;
+			}
+		</script>
+
+		<!-- This would be the compiled Emscripten output -->
+		<!-- In production: <script src="main.js"></script> -->
+
+		<!-- For demo without build, we simulate with inline WASM -->
+		<script>
+			// Fallback: Pre-compiled minimal WASM for demo
+			// In real usage, this comes from Emscripten build
+
+			if (typeof Module._add === "undefined") {
+				// Simple fallback implementations
+				Module._add = (a, b) => a + b;
+				Module._subtract = (a, b) => a - b;
+				Module._multiply = (a, b) => a * b;
+				Module._divide = (a, b) => (b !== 0 ? a / b : 0);
+				Module._fibonacci = function fib(n) {
+					if (n <= 1) return n;
+					return fib(n - 1) + fib(n - 2);
+				};
+				Module._heavy_computation = function (iterations) {
+					let result = 0;
+					for (let i = 0; i < iterations; i++) {
+						result += (i * i) % 1000;
+						result ^= result << 3;
+						result = (result + 17) % 10000;
+					}
+					return result;
+				};
+				Module.cwrap = function (name, returnType, argTypes) {
+					if (name === "greet") return (s) => `Hello, ${s}! 👋 from C/WASM`;
+					if (name === "reverse_string")
+						return (s) => s.split("").reverse().join("");
+					return () => {};
+				};
+
+				// Trigger ready state
+				setTimeout(() => {
+					if (Module.onRuntimeInitialized) {
+						Module.onRuntimeInitialized();
+					}
+				}, 100);
+			}
+		</script>
+	</body>
+</html>

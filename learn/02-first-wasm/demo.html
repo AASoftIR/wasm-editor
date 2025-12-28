@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Lesson 02: Your First WASM Calculator</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			body {
+				font-family: "Segoe UI", system-ui, sans-serif;
+				background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+				min-height: 100vh;
+				color: #fff;
+				padding: 2rem;
+			}
+			.container {
+				max-width: 600px;
+				margin: 0 auto;
+			}
+			h1 {
+				text-align: center;
+				margin-bottom: 0.5rem;
+				font-size: 2rem;
+				background: linear-gradient(90deg, #ff6b6b, #feca57);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+			}
+			.subtitle {
+				text-align: center;
+				color: #888;
+				margin-bottom: 2rem;
+			}
+			.calculator {
+				background: rgba(255, 255, 255, 0.05);
+				border-radius: 20px;
+				padding: 2rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.display {
+				background: #0a0a15;
+				border-radius: 10px;
+				padding: 1.5rem;
+				margin-bottom: 1.5rem;
+				text-align: right;
+				font-size: 2.5rem;
+				font-family: "Fira Code", monospace;
+				color: #00ff88;
+				overflow: hidden;
+				min-height: 80px;
+				display: flex;
+				align-items: center;
+				justify-content: flex-end;
+			}
+			.buttons {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 10px;
+			}
+			button {
+				padding: 1.2rem;
+				font-size: 1.3rem;
+				border: none;
+				border-radius: 10px;
+				cursor: pointer;
+				transition: all 0.2s;
+				font-family: "Segoe UI", sans-serif;
+			}
+			button:hover {
+				transform: scale(1.05);
+			}
+			.num {
+				background: rgba(255, 255, 255, 0.1);
+				color: white;
+			}
+			.num:hover {
+				background: rgba(255, 255, 255, 0.2);
+			}
+			.op {
+				background: linear-gradient(135deg, #667eea, #764ba2);
+				color: white;
+			}
+			.op:hover {
+				box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+			}
+			.special {
+				background: linear-gradient(135deg, #f093fb, #f5576c);
+				color: white;
+			}
+			.equals {
+				background: linear-gradient(135deg, #11998e, #38ef7d);
+				color: white;
+				grid-column: span 2;
+			}
+			.clear {
+				background: linear-gradient(135deg, #eb3349, #f45c43);
+				color: white;
+			}
+			.status {
+				margin-top: 1.5rem;
+				padding: 1rem;
+				background: rgba(0, 255, 136, 0.1);
+				border-radius: 10px;
+				text-align: center;
+				font-size: 0.9rem;
+			}
+			.status.loading {
+				background: rgba(255, 200, 0, 0.1);
+				color: #ffd700;
+			}
+			.status.ready {
+				color: #00ff88;
+			}
+			.factorial-demo {
+				margin-top: 2rem;
+				background: rgba(255, 255, 255, 0.05);
+				border-radius: 20px;
+				padding: 2rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.factorial-demo h2 {
+				margin-bottom: 1rem;
+				color: #feca57;
+			}
+			.factorial-input {
+				display: flex;
+				gap: 1rem;
+				margin-bottom: 1rem;
+			}
+			.factorial-input input {
+				flex: 1;
+				padding: 1rem;
+				border-radius: 10px;
+				border: none;
+				background: #0a0a15;
+				color: white;
+				font-size: 1.2rem;
+				text-align: center;
+			}
+			.factorial-input button {
+				padding: 1rem 2rem;
+			}
+			.factorial-result {
+				text-align: center;
+				font-size: 1.5rem;
+				padding: 1rem;
+				background: rgba(0, 0, 0, 0.3);
+				border-radius: 10px;
+			}
+			.code-hint {
+				margin-top: 1rem;
+				padding: 1rem;
+				background: #0d1117;
+				border-radius: 8px;
+				font-family: "Fira Code", monospace;
+				font-size: 0.85rem;
+				color: #8b949e;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🧮 WASM Calculator</h1>
+			<p class="subtitle">All math runs in WebAssembly!</p>
+
+			<div class="calculator">
+				<div class="display" id="display">0</div>
+
+				<div class="buttons">
+					<button class="clear" onclick="clearDisplay()">C</button>
+					<button class="special" onclick="inputFactorial()">n!</button>
+					<button class="op" onclick="setOperation('/')">÷</button>
+					<button class="op" onclick="setOperation('*')">×</button>
+
+					<button class="num" onclick="appendNumber(7)">7</button>
+					<button class="num" onclick="appendNumber(8)">8</button>
+					<button class="num" onclick="appendNumber(9)">9</button>
+					<button class="op" onclick="setOperation('-')">−</button>
+
+					<button class="num" onclick="appendNumber(4)">4</button>
+					<button class="num" onclick="appendNumber(5)">5</button>
+					<button class="num" onclick="appendNumber(6)">6</button>
+					<button class="op" onclick="setOperation('+')">+</button>
+
+					<button class="num" onclick="appendNumber(1)">1</button>
+					<button class="num" onclick="appendNumber(2)">2</button>
+					<button class="num" onclick="appendNumber(3)">3</button>
+					<button class="equals" onclick="calculate()" style="grid-row: span 2">
+						=
+					</button>
+
+					<button
+						class="num"
+						onclick="appendNumber(0)"
+						style="grid-column: span 2"
+					>
+						0
+					</button>
+					<button class="num" onclick="appendDot()">.</button>
+				</div>
+
+				<div id="status" class="status loading">⏳ Loading WASM module...</div>
+			</div>
+
+			<div class="factorial-demo">
+				<h2>🎯 Factorial Demo (Recursive WASM!)</h2>
+				<div class="factorial-input">
+					<input
+						type="number"
+						id="factorialInput"
+						value="5"
+						min="0"
+						max="12"
+						placeholder="Enter n"
+					/>
+					<button class="special" onclick="calculateFactorial()">
+						Calculate n!
+					</button>
+				</div>
+				<div class="factorial-result" id="factorialResult">5! = ?</div>
+				<div class="code-hint">
+					💡 This uses a recursive WASM function! <br />
+					Max input: 12 (larger overflows 32-bit int)
+				</div>
+			</div>
+		</div>
+
+		<script>
+			// Pre-compiled calculator WASM binary
+			// Contains: add, subtract, multiply, divide, factorial
+			const calculatorWasm = new Uint8Array([
+				0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x0b, 0x02, 0x60,
+				0x02, 0x7f, 0x7f, 0x01, 0x7f, 0x60, 0x01, 0x7f, 0x01, 0x7f, 0x03, 0x06,
+				0x05, 0x00, 0x00, 0x00, 0x00, 0x01, 0x07, 0x2d, 0x05, 0x03, 0x61, 0x64,
+				0x64, 0x00, 0x00, 0x08, 0x73, 0x75, 0x62, 0x74, 0x72, 0x61, 0x63, 0x74,
+				0x00, 0x01, 0x08, 0x6d, 0x75, 0x6c, 0x74, 0x69, 0x70, 0x6c, 0x79, 0x00,
+				0x02, 0x06, 0x64, 0x69, 0x76, 0x69, 0x64, 0x65, 0x00, 0x03, 0x09, 0x66,
+				0x61, 0x63, 0x74, 0x6f, 0x72, 0x69, 0x61, 0x6c, 0x00, 0x04, 0x0a, 0x32,
+				0x05, 0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x6a, 0x0b, 0x07, 0x00, 0x20,
+				0x00, 0x20, 0x01, 0x6b, 0x0b, 0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x6c,
+				0x0b, 0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x6d, 0x0b, 0x13, 0x00, 0x20,
+				0x00, 0x41, 0x01, 0x4c, 0x04, 0x7f, 0x41, 0x01, 0x05, 0x20, 0x00, 0x20,
+				0x00, 0x41, 0x01, 0x6b, 0x10, 0x04, 0x6c, 0x0b, 0x0b,
+			]);
+
+			let wasm = null;
+			let currentInput = "0";
+			let previousInput = null;
+			let operation = null;
+
+			// Initialize WASM
+			async function initWasm() {
+				try {
+					const { instance } = await WebAssembly.instantiate(calculatorWasm);
+					wasm = instance.exports;
+					document.getElementById("status").className = "status ready";
+					document.getElementById("status").innerHTML =
+						"✅ WASM module loaded! All calculations run in WebAssembly.";
+					console.log("WASM exports:", Object.keys(wasm));
+				} catch (e) {
+					document.getElementById("status").innerHTML =
+						"❌ Failed to load WASM: " + e.message;
+					console.error(e);
+				}
+			}
+
+			function updateDisplay() {
+				document.getElementById("display").textContent = currentInput;
+			}
+
+			function appendNumber(num) {
+				if (currentInput === "0" || currentInput === "Error") {
+					currentInput = num.toString();
+				} else {
+					currentInput += num;
+				}
+				updateDisplay();
+			}
+
+			function appendDot() {
+				if (!currentInput.includes(".")) {
+					currentInput += ".";
+					updateDisplay();
+				}
+			}
+
+			function clearDisplay() {
+				currentInput = "0";
+				previousInput = null;
+				operation = null;
+				updateDisplay();
+			}
+
+			function setOperation(op) {
+				previousInput = parseFloat(currentInput);
+				operation = op;
+				currentInput = "0";
+			}
+
+			function calculate() {
+				if (!wasm || previousInput === null || operation === null) return;
+
+				const a = Math.floor(previousInput);
+				const b = Math.floor(parseFloat(currentInput));
+				let result;
+
+				switch (operation) {
+					case "+":
+						result = wasm.add(a, b);
+						break;
+					case "-":
+						result = wasm.subtract(a, b);
+						break;
+					case "*":
+						result = wasm.multiply(a, b);
+						break;
+					case "/":
+						if (b === 0) {
+							currentInput = "Error";
+							updateDisplay();
+							return;
+						}
+						result = wasm.divide(a, b);
+						break;
+				}
+
+				currentInput = result.toString();
+				previousInput = null;
+				operation = null;
+				updateDisplay();
+			}
+
+			function inputFactorial() {
+				// Use current input for factorial
+				const n = Math.floor(parseFloat(currentInput));
+				if (n < 0 || n > 12) {
+					currentInput = "Error";
+				} else if (wasm) {
+					currentInput = wasm.factorial(n).toString();
+				}
+				updateDisplay();
+			}
+
+			function calculateFactorial() {
+				if (!wasm) return;
+
+				const input = document.getElementById("factorialInput");
+				const n = parseInt(input.value);
+
+				if (isNaN(n) || n < 0 || n > 12) {
+					document.getElementById(
+						"factorialResult"
+					).innerHTML = `<span style="color: #f45c43">Invalid input! Use 0-12</span>`;
+					return;
+				}
+
+				const result = wasm.factorial(n);
+				document.getElementById(
+					"factorialResult"
+				).innerHTML = `<span style="color: #00ff88">${n}! = ${result.toLocaleString()}</span>`;
+			}
+
+			// Keyboard support
+			document.addEventListener("keydown", (e) => {
+				if (e.key >= "0" && e.key <= "9") appendNumber(parseInt(e.key));
+				else if (e.key === ".") appendDot();
+				else if (e.key === "+") setOperation("+");
+				else if (e.key === "-") setOperation("-");
+				else if (e.key === "*") setOperation("*");
+				else if (e.key === "/") setOperation("/");
+				else if (e.key === "Enter" || e.key === "=") calculate();
+				else if (e.key === "Escape" || e.key === "c") clearDisplay();
+			});
+
+			// Initialize
+			initWasm();
+		</script>
+	</body>
+</html>

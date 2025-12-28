@@ -28,9 +28,9 @@
 │  START HERE                                                 │
 │  ↓                                                          │
 │  01. What is WASM? ──────────────────────────────────────┐  │
-│  02. Your First WASM (no Rust needed!) ──────────────────┤  │
-│  03. WASM + JavaScript Bridge ───────────────────────────┤  │
-│  04. Rust → WASM (the real deal) ────────────────────────┤  │
+│  02. Your First WASM (hand-written WAT) ──────────────┤  │
+│  03. WASM + JavaScript Bridge ───────────────────────┤  │
+│  04. C → WASM (Emscripten power!) ──────────────────┤  │
 │  05. Memory & Performance ───────────────────────────────┤  │
 │  06. Real Project: mix editor ───────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -55,7 +55,7 @@ cd learn/01-what-is-wasm
 - **Required:** Modern browser (Chrome/Firefox/Edge)
 - **Required:** Basic HTML/CSS/JavaScript knowledge
 - **Optional:** Python 3.8+ (for CLI tool)
-- **Optional:** Rust (for advanced lessons)
+- **Optional:** Emscripten (for C → WASM compilation)
 
 ## 🎮 The Mix Project
 
@@ -63,7 +63,7 @@ This repo includes a real-world project: **mix** — a minimal, dual-mode WASM c
 
 - 🎯 Vim + VS Code mental models
 - ⚡ Loads in <100ms
-- 🦀 Rust → WASM core
+- 🔧 C → WASM core (Emscripten)
 - 🌐 Fully offline-capable
 
 See [mix/README.md](mix/README.md) for project details.
@@ -79,7 +79,7 @@ See [mix/README.md](mix/README.md) for project details.
 
 - [x] Basic WASM concepts
 - [x] JavaScript interop examples
-- [x] Rust to WASM pipeline
+- [x] C to WASM pipeline (Emscripten)
 - [ ] Advanced memory management
 - [ ] Threading with Web Workers
 - [ ] WASI (WebAssembly System Interface)

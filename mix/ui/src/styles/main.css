@@ -1,0 +1,284 @@
+/**
+ * mix Editor - Main Styles
+ * 
+ * Using CSS variables for theming
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   CSS VARIABLES (Theme: VS Dark)
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+	/* Colors */
+	--bg-primary: #1e1e1e;
+	--bg-secondary: #252526;
+	--bg-tertiary: #2d2d30;
+	--fg-primary: #d4d4d4;
+	--fg-secondary: #808080;
+	--fg-muted: #505050;
+
+	/* Syntax colors */
+	--syntax-keyword: #569cd6;
+	--syntax-string: #ce9178;
+	--syntax-comment: #6a9955;
+	--syntax-function: #dcdcaa;
+	--syntax-type: #4ec9b0;
+	--syntax-number: #b5cea8;
+	--syntax-operator: #d4d4d4;
+
+	/* UI colors */
+	--accent: #007acc;
+	--accent-light: #1e90ff;
+	--cursor-color: #aeafad;
+	--selection-bg: rgba(38, 79, 120, 0.5);
+	--line-highlight: rgba(255, 255, 255, 0.04);
+
+	/* Sizing */
+	--line-height: 22px;
+	--font-size: 14px;
+	--font-family: "Fira Code", "Consolas", "Monaco", monospace;
+	--line-number-width: 50px;
+	--status-bar-height: 24px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════════════════════════════ */
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html,
+body {
+	height: 100%;
+	overflow: hidden;
+}
+
+body {
+	background: var(--bg-primary);
+	color: var(--fg-primary);
+	font-family: var(--font-family);
+	font-size: var(--font-size);
+	line-height: var(--line-height);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EDITOR CONTAINER
+   ═══════════════════════════════════════════════════════════════ */
+
+#editor-container {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	width: 100vw;
+}
+
+.mix-editor {
+	flex: 1;
+	display: flex;
+	overflow: hidden;
+	outline: none;
+	position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LINE NUMBERS
+   ═══════════════════════════════════════════════════════════════ */
+
+.line-numbers {
+	width: var(--line-number-width);
+	background: var(--bg-secondary);
+	padding: 0 8px;
+	text-align: right;
+	color: var(--fg-muted);
+	user-select: none;
+	flex-shrink: 0;
+	overflow: hidden;
+}
+
+.line-number {
+	height: var(--line-height);
+	line-height: var(--line-height);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTENT AREA
+   ═══════════════════════════════════════════════════════════════ */
+
+.content-area {
+	flex: 1;
+	position: relative;
+	padding: 0 8px;
+	overflow: auto;
+	background: var(--bg-primary);
+}
+
+.line {
+	height: var(--line-height);
+	line-height: var(--line-height);
+	white-space: pre;
+	position: relative;
+}
+
+.line:hover {
+	background: var(--line-highlight);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CURSOR
+   ═══════════════════════════════════════════════════════════════ */
+
+.cursor {
+	position: absolute;
+	background: var(--cursor-color);
+	pointer-events: none;
+	z-index: 10;
+}
+
+/* Normal mode: block cursor */
+.cursor.normal-mode {
+	width: 9.6px; /* Approximate char width */
+	height: var(--line-height);
+	opacity: 0.7;
+	animation: blink-block 1s step-end infinite;
+}
+
+/* Insert mode: line cursor */
+.cursor.insert-mode {
+	width: 2px;
+	height: var(--line-height);
+	animation: blink-line 0.5s ease-in-out infinite;
+}
+
+.cursor.focused {
+	opacity: 1;
+}
+
+@keyframes blink-block {
+	0%,
+	100% {
+		opacity: 0.7;
+	}
+	50% {
+		opacity: 0.3;
+	}
+}
+
+@keyframes blink-line {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STATUS BAR
+   ═══════════════════════════════════════════════════════════════ */
+
+.status-bar {
+	height: var(--status-bar-height);
+	background: var(--accent);
+	color: white;
+	display: flex;
+	align-items: center;
+	padding: 0 12px;
+	font-size: 12px;
+	gap: 12px;
+}
+
+.status-bar .mode {
+	font-weight: bold;
+	text-transform: uppercase;
+	padding: 2px 8px;
+	border-radius: 3px;
+}
+
+.status-bar .mode-normal {
+	background: rgba(0, 0, 0, 0.2);
+}
+
+.status-bar .mode-insert {
+	background: #4ec9b0;
+	color: #000;
+}
+
+.status-bar .mode-visual {
+	background: #c586c0;
+	color: #000;
+}
+
+.status-bar .spacer {
+	flex: 1;
+}
+
+.status-bar .position {
+	opacity: 0.8;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VIM ZEN THEME
+   ═══════════════════════════════════════════════════════════════ */
+
+.theme-vim-zen {
+	--bg-primary: #0a0a0a;
+	--bg-secondary: #0f0f0f;
+	--bg-tertiary: #1a1a1a;
+	--fg-primary: #888888;
+	--fg-secondary: #555555;
+	--fg-muted: #333333;
+
+	--syntax-keyword: #888888;
+	--syntax-string: #888888;
+	--syntax-comment: #444444;
+	--syntax-function: #888888;
+	--syntax-type: #aaaaaa;
+	--syntax-number: #888888;
+
+	--accent: #333333;
+	--cursor-color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════════════════════ */
+
+.content-area::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+.content-area::-webkit-scrollbar-track {
+	background: var(--bg-secondary);
+}
+
+.content-area::-webkit-scrollbar-thumb {
+	background: var(--fg-muted);
+	border-radius: 5px;
+}
+
+.content-area::-webkit-scrollbar-thumb:hover {
+	background: var(--fg-secondary);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FOCUS MODE
+   ═══════════════════════════════════════════════════════════════ */
+
+.mix-editor.focus-mode .line-numbers {
+	display: none;
+}
+
+.mix-editor.focus-mode .status-bar {
+	opacity: 0;
+	transition: opacity 0.3s;
+}
+
+.mix-editor.focus-mode:hover .status-bar {
+	opacity: 1;
+}

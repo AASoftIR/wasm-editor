@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Lesson 01: What is WASM?</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			body {
+				font-family: "Segoe UI", system-ui, sans-serif;
+				background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+				min-height: 100vh;
+				color: #fff;
+				padding: 2rem;
+			}
+			.container {
+				max-width: 800px;
+				margin: 0 auto;
+			}
+			h1 {
+				text-align: center;
+				margin-bottom: 2rem;
+				font-size: 2.5rem;
+				background: linear-gradient(90deg, #00d4ff, #7c3aed);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+			}
+			.demo-box {
+				background: rgba(255, 255, 255, 0.05);
+				border-radius: 16px;
+				padding: 2rem;
+				margin-bottom: 2rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.demo-box h2 {
+				color: #00d4ff;
+				margin-bottom: 1rem;
+			}
+			.result {
+				font-size: 3rem;
+				text-align: center;
+				padding: 2rem;
+				background: rgba(0, 212, 255, 0.1);
+				border-radius: 8px;
+				margin: 1rem 0;
+			}
+			.comparison {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 1rem;
+				margin-top: 1rem;
+			}
+			.comparison-card {
+				background: rgba(255, 255, 255, 0.05);
+				padding: 1.5rem;
+				border-radius: 8px;
+				text-align: center;
+			}
+			.comparison-card.js {
+				border-top: 3px solid #f7df1e;
+			}
+			.comparison-card.wasm {
+				border-top: 3px solid #654ff0;
+			}
+			.time {
+				font-size: 2rem;
+				font-weight: bold;
+				margin: 0.5rem 0;
+			}
+			.js .time {
+				color: #f7df1e;
+			}
+			.wasm .time {
+				color: #654ff0;
+			}
+			button {
+				background: linear-gradient(90deg, #00d4ff, #7c3aed);
+				border: none;
+				padding: 1rem 2rem;
+				border-radius: 8px;
+				color: white;
+				font-size: 1rem;
+				cursor: pointer;
+				width: 100%;
+				transition: transform 0.2s, box-shadow 0.2s;
+			}
+			button:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+			}
+			.code-block {
+				background: #0d1117;
+				padding: 1rem;
+				border-radius: 8px;
+				font-family: "Fira Code", monospace;
+				font-size: 0.9rem;
+				overflow-x: auto;
+				margin: 1rem 0;
+			}
+			.code-block .comment {
+				color: #6a737d;
+			}
+			.code-block .keyword {
+				color: #ff7b72;
+			}
+			.code-block .function {
+				color: #d2a8ff;
+			}
+			.code-block .number {
+				color: #79c0ff;
+			}
+			.info {
+				background: rgba(0, 212, 255, 0.1);
+				border-left: 4px solid #00d4ff;
+				padding: 1rem;
+				margin: 1rem 0;
+				border-radius: 0 8px 8px 0;
+			}
+			.loading {
+				text-align: center;
+				padding: 2rem;
+				color: #888;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🚀 WebAssembly Demo</h1>
+
+			<!-- Demo 1: Simple Addition -->
+			<div class="demo-box">
+				<h2>Demo 1: WASM Adds Two Numbers</h2>
+				<p>This WASM module was compiled from just 6 lines of code!</p>
+
+				<div class="code-block">
+					<span class="comment">;; This is WAT (WebAssembly Text Format)</span
+					><br />
+					(<span class="keyword">module</span><br />
+					&nbsp;&nbsp;(<span class="keyword">func</span> $add (<span
+						class="keyword"
+						>param</span
+					>
+					$a i32) (<span class="keyword">param</span> $b i32) (<span
+						class="keyword"
+						>result</span
+					>
+					i32)<br />
+					&nbsp;&nbsp;&nbsp;&nbsp;local.get $a<br />
+					&nbsp;&nbsp;&nbsp;&nbsp;local.get $b<br />
+					&nbsp;&nbsp;&nbsp;&nbsp;i32.add)<br />
+					&nbsp;&nbsp;(<span class="keyword">export</span>
+					<span class="function">"add"</span> (<span class="keyword">func</span>
+					$add)))
+				</div>
+
+				<div class="result" id="add-result">
+					5 + 7 = <span id="sum">?</span>
+				</div>
+
+				<button onclick="runAddDemo()">Run WASM Add Function</button>
+			</div>
+
+			<!-- Demo 2: Performance Comparison -->
+			<div class="demo-box">
+				<h2>Demo 2: Speed Test — JS vs WASM</h2>
+				<p>Let's calculate fibonacci(40) and compare execution time.</p>
+
+				<div class="info">
+					💡 <strong>Note:</strong> For this demo, we'll simulate WASM
+					performance since we're keeping it simple. In Lesson 04, you'll
+					compile real Rust to WASM!
+				</div>
+
+				<div class="comparison">
+					<div class="comparison-card js">
+						<h3>JavaScript</h3>
+						<div class="time" id="js-time">— ms</div>
+						<small>Regular JS execution</small>
+					</div>
+					<div class="comparison-card wasm">
+						<h3>WASM (simulated)</h3>
+						<div class="time" id="wasm-time">— ms</div>
+						<small>~2-3x faster typical</small>
+					</div>
+				</div>
+
+				<br />
+				<button onclick="runSpeedTest()">Run Speed Test</button>
+			</div>
+
+			<!-- What You Learned -->
+			<div class="demo-box">
+				<h2>✅ What You Learned</h2>
+				<ul style="padding-left: 1.5rem; line-height: 2">
+					<li>WASM runs in browsers alongside JavaScript</li>
+					<li>You can call WASM functions from JS</li>
+					<li>WASM is fast for computation-heavy tasks</li>
+					<li>WAT is the human-readable text format</li>
+				</ul>
+			</div>
+		</div>
+
+		<script>
+			// Pre-compiled WASM binary for the add function
+			// This is the binary equivalent of the WAT code shown above
+			const addWasmBinary = new Uint8Array([
+				0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x07, 0x01, 0x60,
+				0x02, 0x7f, 0x7f, 0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x07, 0x01,
+				0x03, 0x61, 0x64, 0x64, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x20,
+				0x00, 0x20, 0x01, 0x6a, 0x0b,
+			]);
+
+			let wasmAdd = null;
+
+			// Initialize WASM module
+			async function initWasm() {
+				try {
+					const { instance } = await WebAssembly.instantiate(addWasmBinary);
+					wasmAdd = instance.exports.add;
+					console.log("✅ WASM module loaded!");
+				} catch (e) {
+					console.error("Failed to load WASM:", e);
+				}
+			}
+
+			// Demo 1: Simple addition
+			function runAddDemo() {
+				if (wasmAdd) {
+					const result = wasmAdd(5, 7);
+					document.getElementById("sum").textContent = result;
+					document.getElementById("sum").style.color = "#00ff88";
+				} else {
+					alert("WASM not loaded yet!");
+				}
+			}
+
+			// Demo 2: Speed comparison
+			function fibonacciJS(n) {
+				if (n <= 1) return n;
+				return fibonacciJS(n - 1) + fibonacciJS(n - 2);
+			}
+
+			function runSpeedTest() {
+				const n = 40;
+
+				// JavaScript test
+				const jsStart = performance.now();
+				const jsResult = fibonacciJS(n);
+				const jsEnd = performance.now();
+				const jsTime = (jsEnd - jsStart).toFixed(1);
+
+				document.getElementById("js-time").textContent = jsTime + " ms";
+
+				// Simulated WASM time (typically 2-3x faster)
+				// In real WASM (Lesson 04), you'll see actual speedups!
+				const wasmTime = (jsTime / 2.5).toFixed(1);
+				document.getElementById("wasm-time").textContent =
+					"~" + wasmTime + " ms";
+			}
+
+			// Initialize on load
+			initWasm();
+		</script>
+	</body>
+</html>
